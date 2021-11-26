@@ -17,13 +17,20 @@ class Database:
         except(Exception, psycopg2.Error) as error:
             print('Error with connection', error)
 
+    def prepare_for_data_generation(self):
+        self.define_generate_string_func()
+        self.define_generate_int_func()
+        self.define_get_random_company_id_func()
+        self.define_get_random_developer_id_func()
+        self.define_get_random_project_id_func()
+
     def close(self):
         if self.connection:
             self.cursor.close()
             self.connection.close()
             print("Connection closed")
 
-    # functions
+    # functions for data generation
 
     def define_generate_string_func(self):
         self.cursor.execute('create or replace function generateString(length int) '
@@ -57,14 +64,70 @@ class Database:
                             '$$; ')
         self.connection.commit()
 
+    def define_get_random_company_id_func(self):
+        self.cursor.execute('create function getrandomcompanyid() returns text '
+                            'language plpgsql '
+                            'as '
+                            '$$ '
+                            'declare '
+                            'outputInt int; '
+                            'begin '
+                            'SELECT id'
+                            'FROM companies'
+                            'ORDER BY random()'
+                            'LIMIT 1 '
+                            'into outputInt; '
+                            'return outputInt; '
+                            'end;' 
+                            '$$; ')
+        self.connection.commit()
+
+    def define_get_random_developer_id_func(self):
+        self.cursor.execute('create function getrandomdeveloperid() returns text '
+                            'language plpgsql '
+                            'as '
+                            '$$ '
+                            'declare '
+                            'outputInt int; '
+                            'begin '
+                            'SELECT id'
+                            'FROM developers'
+                            'ORDER BY random()'
+                            'LIMIT 1 '
+                            'into outputInt; '
+                            'return outputInt; '
+                            'end;' 
+                            '$$; ')
+        self.connection.commit()
+
+    def define_get_random_project_id_func(self):
+        self.cursor.execute('create function getrandomprojectid() returns text '
+                            'language plpgsql '
+                            'as '
+                            '$$ '
+                            'declare '
+                            'outputInt int; '
+                            'begin '
+                            'SELECT id'
+                            'FROM projects'
+                            'ORDER BY random()'
+                            'LIMIT 1 '
+                            'into outputInt; '
+                            'return outputInt; '
+                            'end;' 
+                            '$$; ')
+        self.connection.commit()
+
     # not needed method
     # def get_all_companies(self):
     #     self.cursor.execute("SELECT * FROM public.companies")
     #     self.connection.commit()
     #     return self.cursor.fetchall()
 
+    # data generation
+
     def generate_companies(self, number):
-        start_time = time.time()
+        # start_time = time.time()
         try:
             self.cursor.execute(f'INSERT  INTO companies (name,ceo)'
                                 f' SELECT generatestring(15),'
@@ -72,41 +135,57 @@ class Database:
                                 f'FROM generate_series(1, {number})')
             self.connection.commit()
         except Exception as err:
-            print("Generate Rows error! ", err)
-        end_time = time.time()
-        return str(end_time - start_time)[:9] + 's'
+            print("Generate companies error! ", err)
+        # end_time = time.time()
+        # return str(end_time - start_time)[:9] + 's'
 
     def generate_developers(self, number):
-        start_time = time.time()
+        # start_time = time.time()
         try:
             self.cursor.execute(f'INSERT  INTO developers (name,specialization)'
-                                f' SELECT generatestring(15),'
+                                f'SELECT generatestring(15),'
                                 f'generatestring(15)'
                                 f'FROM generate_series(1, {number})')
             self.connection.commit()
         except Exception as err:
-            print("Generate Rows error! ", err)
-        end_time = time.time()
-        return str(end_time - start_time)[:9] + 's'
-
-        self.fill_companies_developers_table()
+            print("Generate developers error! ", err)
+        # end_time = time.time()
+        # return str(end_time - start_time)[:9] + 's'
 
     def generate_projects(self, number):
-        start_time = time.time()
+        # start_time = time.time()
         try:
             self.cursor.execute(f"INSERT  INTO projects (title,customer,budget,company_id)"
                                 f"SELECT generatestring(15),"
                                 f"generatestring(15),"
-                                f"generateint(100000)::money "
-                                f"getrandomrow(companies)::int,"
+                                f"generateint(100000)::int, "
+                                f"getrandomcompanyid()::int"
                                 f"FROM generate_series(1, {number})")
             self.connection.commit()
         except Exception as err:
-            print("Generate Rows error! ", err)
-        end_time = time.time()
-        return str(end_time - start_time)[:9] + 's'
+            print("Generate projects error! ", err)
+        # end_time = time.time()
+        # return str(end_time - start_time)[:9] + 's'
 
-        self.fill_developers_projects_table()
+    def fill_companies_developers_table(self, number):
+        try:
+            self.cursor.execute(f"INSERT  INTO companies_developers (company_id, developers_id)"
+                                f"SELECT getrandomcompanyid()::int,"
+                                f"getrandomdeveloperid()::int"
+                                f"FROM generate_series(1, {number})")
+            self.connection.commit()
+        except Exception as err:
+            print("fill_companies_developers_table error! ", err)
+
+    def fill_developers_projects_table(self, number):
+        try:
+            self.cursor.execute(f"INSERT  INTO developers_projects (developer_id, project_id)"
+                                f"SELECT getrandomdeveloperid()::int,"
+                                f"getrandomprojectid()::int"
+                                f"FROM generate_series(1, {number})")
+            self.connection.commit()
+        except Exception as err:
+            print("fill_developers_projects_table error! ", err)
 
     # CUD methods
 
