@@ -6,15 +6,8 @@ from view import View
 database = Database()
 database.connect()
 view = View()
-# choice=0
-# while choice !=28:
-#     choice=view.menu()
-#     if choice=="1":
-#         companies=database.get_all_companies()
-#         if type(companies) is str:
-#             view.print_mess(companies)
-#         else:
-#             view.print_all_companies(companies)
+
+#try:
 generate = view.generate_items()
 if generate:
     com_num = view.get_number_of_items_to_generate("companies")
@@ -54,32 +47,26 @@ while True:
     elif choice == 2:
         entity_type = view.choose_item_type()
         if entity_type == "companies":
-            i = view.get_id("company")
-            company = view.get_company()
-            company.id = i
+            company = view.get_company_with_id()
             res = database.update_company(company)
             if res == 0:
-                view.print_update_error("Company", i)
+                view.print_update_error("Company", company.id)
             else:
                 view.print_updated_entity("Company")
         elif entity_type == "developers":
-            i = view.get_id("developer")
-            developer = view.get_developer()
-            developer.id = i
+            developer = view.get_developer_with_id()
             res = database.update_developer(developer)
             if res == 0:
-                view.print_update_error("Developer", i)
+                view.print_update_error("Developer", developer.id)
             else:
                 view.print_updated_entity("Developer")
         elif entity_type == "projects":
-            i = view.get_id("project")
-            project = view.get_project()
-            project.id = i
+            project = view.get_project_with_id()
             res = database.update_project(project)
             if res == -1:
                 view.print_updated_project_error(project.company_id)
             elif res == 0:
-                view.print_update_error("Project", i)
+                view.print_update_error("Project", project.id)
             else:
                 view.print_updated_entity("Project")
     elif choice == 3:
@@ -126,3 +113,5 @@ while True:
                 view.print_delete_error("Project", i)
             else:
                 view.print_deleted_entity("Project")
+# except Exception as err:
+#     view.print_system_error()
