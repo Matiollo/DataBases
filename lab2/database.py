@@ -50,7 +50,7 @@ class Database:
         self.connection.commit()
 
     def define_generate_int_func(self):
-        self.cursor.execute('create function generateint(max integer) returns text '
+        self.cursor.execute('create or replace function generateint(max integer) returns text '
                             'language plpgsql '
                             'as '
                             '$$ '
@@ -65,7 +65,7 @@ class Database:
         self.connection.commit()
 
     def define_get_random_company_id_func(self):
-        self.cursor.execute('create function getrandomcompanyid() returns text '
+        self.cursor.execute('create or replace function getrandomcompanyid() returns text '
                             'language plpgsql '
                             'as '
                             '$$ '
@@ -83,7 +83,7 @@ class Database:
         self.connection.commit()
 
     def define_get_random_developer_id_func(self):
-        self.cursor.execute('create function getrandomdeveloperid() returns text '
+        self.cursor.execute('create or replace function getrandomdeveloperid() returns text '
                             'language plpgsql '
                             'as '
                             '$$ '
@@ -101,7 +101,7 @@ class Database:
         self.connection.commit()
 
     def define_get_random_project_id_func(self):
-        self.cursor.execute('create function getrandomprojectid() returns text '
+        self.cursor.execute('create or replace function getrandomprojectid() returns text '
                             'language plpgsql '
                             'as '
                             '$$ '
@@ -118,19 +118,13 @@ class Database:
                             '$$; ')
         self.connection.commit()
 
-    # not needed method
-    # def get_all_companies(self):
-    #     self.cursor.execute("SELECT * FROM public.companies")
-    #     self.connection.commit()
-    #     return self.cursor.fetchall()
-
     # data generation
 
     def generate_companies(self, number):
         # start_time = time.time()
         try:
             self.cursor.execute(f'INSERT  INTO companies (name,ceo)'
-                                f' SELECT generatestring(15),'
+                                f'SELECT generatestring(15),'
                                 f'generatestring(15)'
                                 f'FROM generate_series(1, {number})')
             self.connection.commit()
@@ -193,47 +187,113 @@ class Database:
         self.cursor.execute("INSERT INTO public.companies(name, ceo) VALUES (%name, %ceo);", (company.name, company.ceo))
         self.connection.commit()
         new_id = self.cursor.execute("SELECT currval('companies_id_seq');")
+        # last_row_id = self.cursor.fetchone()[0]
         return new_id
 
     def update_company(self, company):
-        self.cursor.execute("UPDATE public.companies SET name=%name, ceo=%ceo WHERE id=%id;", (company.name, company.ceo, company.id))
-        updated = self.cursor.rowcount()
+        self.cursor.execute("UPDATE public.companies SET name=%name, ceo=%ceo WHERE id=%id;",
+                            (company.name, company.ceo, company.id))
+        updated = self.cursor.fetchone()[0] # self.cursor.rowcount()
         self.connection.commit()
-        # delete next line
-        print(updated)
         return updated
 
     def delete_company(self, i):
-        self.cursor.execute("DELETE FROM public.companies WHERE id=%id;", i)
+        self.cursor.execute(f'DELETE FROM developers_projects where project_id in (select id from projects where company_id={i});'
+                            f'DELETE FROM public.projects WHERE company_id={i};'
+                            f'DELETE FROM public.companies_developers WHERE company_id={i};'
+                            f'DELETE FROM public.companies WHERE id={i};')
         deleted = self.cursor.rowcount()
         self.connection.commit()
         return deleted
 
     def insert_developer(self, developer):
-        print("not done")
+        self.cursor.execute("INSERT INTO public.developers(name, specialization) VALUES (%name, %specialization);",
+                            (developer.name, developer.specialization))
+        self.connection.commit()
+        new_id = self.cursor.execute("SELECT currval('developers_id_seq');")
+        return new_id
 
     def update_developer(self, developer):
-        print("not done")
+        self.cursor.execute("UPDATE public.developers SET name=%name, specialization=%specialization WHERE id=%id;",
+                            (developer.name, developer.specialization, developer.id))
+        updated = self.cursor.fetchone()[0]  # self.cursor.rowcount()
+        self.connection.commit()
+        return updated
 
     def delete_developer(self, i):
-        print("not done")
+        self.cursor.execute(f'DELETE FROM public.companies_developers WHERE developers_id={i};'
+                            f'DELETE FROM public.developers_projects WHERE developer_id={i};'
+                            f'DELETE FROM public.developers WHERE id={i};')
+        deleted = self.cursor.rowcount()
+        self.connection.commit()
+        return deleted
 
     def insert_project(self, project):
-        print("not done")
+        self.cursor.execute("SELECT COUNT (*) FROM companies WHERE id=%id;", project.company_id)
+        num = self.cursor.fetchone()[0]
+
+        if num != 0:
+            self.cursor.execute("INSERT INTO public.projects(title, customer, budget, company_id) VALUES (%name, %customer, %budget, %company_id);",
+                                (project.title, project.customer, project.budget, project.company_id))
+            self.connection.commit()
+            new_id = self.cursor.execute("SELECT currval('companies_id_seq');")
+            return new_id
+        else:
+            return -1
 
     def update_project(self, project):
-        print("not done")
+        self.cursor.execute("SELECT COUNT (*) FROM companies WHERE id=%id;", project.company_id)
+        num = self.cursor.fetchone()[0]
+
+        if num != 0:
+            self.cursor.execute("UPDATE public.projects SET title=%title, customer=%customer, budget=%budget, company_id=%company_id WHERE id=%id;",
+                                (project.title, project.customer, project.budget, project.company_id, project.id))
+            updated = self.cursor.fetchone()[0]  # self.cursor.rowcount()
+            self.connection.commit()
+            return updated
+        else:
+            return -1
 
     def delete_project(self, i):
-        print("not done")
+        self.cursor.execute(f'DELETE FROM public.developers_projects WHERE project_id={i};'
+                            f'DELETE FROM public.projects WHERE id={i};')
+        deleted = self.cursor.rowcount()
+        self.connection.commit()
+        return deleted
 
     # search methods
 
-    def search_for_projects(self, dev_id, proj_title, proj_budget):
-        #
+    def search_for_projects(self, dev_id, proj_title, proj_budget: int):
+        try:
+            self.cursor.execute(
+                f'SELECT p.id, p.title, p.customer, p.budget, p.company_id from projects as p '
+                f'inner join developers_projects on developers_projects.project_id = p.id '
+                f'Where developer_id = {dev_id} and title = {proj_title} and budget = {proj_budget}')
+            return self.cursor.fetchall()
+        except Exception as err:
+            print("search_for_projects error", err)
 
     def search_for_developers(self, com_id, proj_id, dev_name, dev_specialization):
-        #
+        try:
+            self.cursor.execute(
+                f'SELECT d.id, d.name, d.specialization from developers as d '
+                f'inner join developers_projects on developers_projects.developer_id = d.id '
+                f'inner join companies_developers on companies_developers.developers_id = d.id '
+                f'Where project_id = {proj_id} and company_id = {com_id} and name = {dev_name} '
+                f'and specialization = {dev_specialization}')
+            return self.cursor.fetchall()
+        except Exception as err:
+            print("search_for_developers error", err)
 
     def search_for_companies(self, proj_budget, proj_customer, dev_specialization):
-        #
+        try:
+            self.cursor.execute(
+                f'SELECT c.id, c.name, c.ceo from companies as c '
+                f'inner join projects on projects.company_id = c.id '
+                f'inner join companies_developers on companies_developers.company_id = c.id '
+                f'inner join developers on companies_developers.company_id = developers.id '
+                f'Where budget = {proj_budget} and customer = {proj_customer} and specialization = {dev_specialization}')
+            return self.cursor.fetchall()
+        except Exception as err:
+            print("search_for_companies error", err)
+            

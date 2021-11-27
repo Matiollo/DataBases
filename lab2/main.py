@@ -21,12 +21,13 @@ if generate:
     dev_num = view.get_number_of_items_to_generate("developers")
     proj_num = view.get_number_of_items_to_generate("projects")
 
-    database.define_generate_string_func()
-    database.define_generate_int_func()
+    database.prepare_for_data_generation()
 
     database.generate_companies(com_num)
     database.generate_developers(dev_num)
     database.generate_projects(proj_num)
+    database.fill_companies_developers_table(dev_num)
+    database.fill_developers_projects_table(int(proj_num*4))
 
 while True:
     choice = view.display_menu()
@@ -46,7 +47,10 @@ while True:
         elif entity_type == "projects":
             project = view.get_project()
             res = database.insert_project(project)
-            view.print_inserted_entity("Project", res)
+            if res != -1:
+                view.print_inserted_entity("Project", res)
+            else:
+                view.print_inserted_project_error(project.company_id)
     elif choice == 2:
         entity_type = view.choose_item_type()
         if entity_type == "companies":
@@ -72,21 +76,23 @@ while True:
             project = view.get_project()
             project.id = i
             res = database.update_project(project)
-            if res == 0:
+            if res == -1:
+                view.print_updated_project_error(project.company_id)
+            elif res == 0:
                 view.print_update_error("Project", i)
             else:
                 view.print_updated_entity("Project")
     elif choice == 3:
         search_type = view.choose_search_type()
         if search_type == 1:
-            dev_id = view.get_developer_id()
+            dev_id = view.get_id("developer")
             proj_title = view.get_project_title()
             proj_budget = view.get_project_budget()
             projects = database.search_for_projects(dev_id, proj_title, proj_budget)
             view.print_projects(projects)
         elif search_type == 2:
-            com_id = view.get_company_id()
-            proj_id = view.get_project_id()
+            com_id = view.get_id("company")
+            proj_id = view.get_id("project")
             dev_name = view.get_developer_name()
             dev_specialization = view.get_developer_specialization()
             developers = database.search_for_developers(com_id, proj_id, dev_name, dev_specialization)

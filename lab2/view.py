@@ -134,71 +134,46 @@ class View:
     # search parameters
 
     @staticmethod
-    def get_developer_id():
-        print("Write developer's id: (if you don't want to sort by it, enter anything but a whole positive number.")
-        try:
-            i = int(input())
-            if i >= 1:
-                return i
-            return -1
-        except ValueError:
-            return -1
-
-    @staticmethod
     def get_project_title():
-        print("Write project's title: (if you don't want to sort by it, leave the field blank.")
-        title = input()
+        title = ""
+        while len(title) == 0:
+            print("Write project's title: ")
+            title = input()
         return title
 
     @staticmethod
     def get_project_budget():
-        print("Write project's budget: (if you don't want to sort by it, enter anything but a whole positive number.")
-        try:
-            budget = int(input())
-            if budget >= 1:
-                return budget
-            return 0
-        except ValueError:
-            return 0
-
-    @staticmethod
-    def get_company_id():
-        print("Write company's id: (if you don't want to sort by it, enter anything but a whole positive number.")
-        try:
-            i = int(input())
-            if i >= 1:
-                return i
-            return -1
-        except ValueError:
-            return -1
-
-    @staticmethod
-    def get_project_id():
-        print("Write project's id: (if you don't want to sort by it, enter anything but a whole positive number.")
-        try:
-            i = int(input())
-            if i >= 1:
-                return i
-            return -1
-        except ValueError:
-            return -1
+        budget = -1
+        while budget <= 0:
+            print("Write project's budget: ")
+            try:
+                budget = int(input())
+            except ValueError:
+                print("Budget must be a positive whole number.")
+        return budget
 
     @staticmethod
     def get_developer_name():
-        print("Write developer's name: (if you don't want to sort by it, leave the field blank.")
-        name = input()
+        name = ""
+        while len(name) == 0:
+            print("Write developer's name: ")
+            name = input()
         return name
 
     @staticmethod
     def get_developer_specialization():
-        print("Write developer's specialization: (if you don't want to sort by it, leave the field blank.")
-        specialization = input()
+        specialization = ""
+        while len(specialization) == 0:
+            print("Write developer's specialization: ")
+            specialization = input()
         return specialization
 
     @staticmethod
     def get_project_customer():
-        print("Write project's customer: (if you don't want to sort by it, leave the field blank.")
-        customer = input()
+        customer = ""
+        while len(customer) == 0:
+            print("Write project's customer: ")
+            customer = input()
         return customer
 
     # result
@@ -208,12 +183,20 @@ class View:
         print("{} was successfully inserted. Its id is {}.".format(entity_type, id))
 
     @staticmethod
+    def print_inserted_project_error(company_id):
+        print("Project was not inserted. Company with id {} doesn't exist.".format(company_id))
+
+    @staticmethod
     def print_updated_entity(entity_type):
         print("{} was successfully updated.".format(entity_type))
 
     @staticmethod
     def print_update_error(entity_type, id):
         print("{} with id {} does not exist and therefore it wasn't updated.".format(entity_type, id))
+
+    @staticmethod
+    def print_updated_project_error(company_id):
+        print("Project was not updated. Company with id {} doesn't exist.".format(company_id))
 
     @staticmethod
     def print_deleted_entity(entity_type):
