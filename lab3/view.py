@@ -115,13 +115,7 @@ class View:
                 budget = int(input())
             except ValueError:
                 print("Budget must be a positive whole number.")
-        while company_id <= 0:
-            print("Write id of the company that runs the project:")
-            try:
-                company_id = int(input())
-            except ValueError:
-                print("Company id must be a positive whole number.")
-        project = struct.Project(-1, title, customer, budget, company_id)
+        project = struct.Project(-1, title, customer, budget)
         return project
 
     @staticmethod
@@ -149,13 +143,7 @@ class View:
                 budget = int(input())
             except ValueError:
                 print("Budget must be a positive whole number.")
-        while company_id <= 0:
-            print("Write id of the company that runs the project:")
-            try:
-                company_id = int(input())
-            except ValueError:
-                print("Company id must be a positive whole number.")
-        project = struct.Project(i, title, customer, budget, company_id)
+        project = struct.Project(i, title, customer, budget)
         return project
 
     @staticmethod
@@ -217,8 +205,7 @@ class View:
     def print_projects(projects):
         print("PROJECTS:")
         for proj in projects:
-            print(f"Id: {proj[0]}, Title: {proj[1]}, Customer: {proj[2]}, Budget: {proj[3]}, "
-                  f"Company id: {proj[4]}")
+            print(f"Id: {proj[0]}, Title: {proj[1]}, Customer: {proj[2]}, Budget: {proj[3]}")
         print()
 
     @staticmethod

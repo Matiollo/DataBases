@@ -1,6 +1,7 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
+from links import companies_developers, companies_projects, developers_projects
 
 Base = declarative_base()
 
@@ -10,7 +11,9 @@ class Company(Base):
     id = Column(Integer, primary_key=True)
     name = Column('name', String)
     ceo = Column('ceo', String)
-    # Book = relationship("Book", cascade="all, delete", backref="authors")
+
+    Developers = relationship("Developer", secondary=companies_developers)
+    Projects = relationship("Project", secondary=companies_projects)
 
     def __init__(self, name: str, ceo: str):
         self.name = name
@@ -27,6 +30,9 @@ class Developer(Base):
     name = Column('name', String)
     specialization = Column('specialization', String)
 
+    Companies = relationship("Company", secondary=companies_developers)
+    Projects = relationship("Project", secondary=developers_projects)
+
     def __init__(self, name: str, specialization: str):
         self.name = name
         self.specialization = specialization
@@ -42,6 +48,9 @@ class Project(Base):
     title = Column('title', String)
     customer = Column('customer', String)
     budget = Column('pages', Integer)
+
+    Companies = relationship("Company", secondary=companies_projects)
+    Developers = relationship("Developer", secondary=developers_projects)
 
     def __init__(self, title: str, customer: str, budget: int):
         self.title = title

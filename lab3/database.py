@@ -8,7 +8,7 @@ import time
 
 class Database:
     def __init__(self):
-        self.engine = create_engine('postgresql://postgres:Omezoh38@localhost:5435/mydatabase', echo=True)
+        self.engine = create_engine('postgresql://postgres:Omezoh38@localhost:5435/public', echo=True)
         self.session = sessionmaker(bind=self.engine)()
 
     def close(self):

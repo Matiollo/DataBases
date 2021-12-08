@@ -18,4 +18,3 @@ class Project(NamedTuple):
     title: str
     customer: str
     budget: int
-    company_id: int
