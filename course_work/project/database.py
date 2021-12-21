@@ -1,8 +1,12 @@
-import psycopg2
 from sqlalchemy import create_engine, exc
 from sqlalchemy.orm import sessionmaker
 from models import Participant, Teacher, Competition
+from faker import Faker
 import pandas as pd
+from random import randrange
+from datetime import timedelta
+from datetime import datetime
+import csv
 
 
 class DB:
@@ -16,7 +20,7 @@ class DB:
     def initiate(self):
         try:
             self._engine = create_engine('postgresql://postgres:Omezoh38@localhost:5432/course_work')
-            self._engine2 = create_engine('postgresql://repl_user:Omezoh38@localhost:5432/course_work')
+            self._engine2 = create_engine('postgresql://postgres:Omezoh38@localhost:5432/course_work_replica')
             session = sessionmaker(bind=self._engine)
             session2 = sessionmaker(bind=self._engine2)
             self.s = session()
@@ -197,13 +201,8 @@ class DB:
         try:
             self.s.add(participant)
             self.s.commit()
-        except exc.OperationalError:
-            print("Go to slave server")
-            self.s2.add(participant)
-            self.s2.commit()
         except (Exception, exc.SQLAlchemyError) as error:
             self.s.rollback()
-            self.s2.rollback()
             print("Error in add_participant():", error)
             return "Add is not successful"
         return "Add is successful"
@@ -212,13 +211,8 @@ class DB:
         try:
             self.s.add(teacher)
             self.s.commit()
-        except exc.OperationalError:
-            print("Go to slave server")
-            self.s2.add(teacher)
-            self.s2.commit()
         except (Exception, exc.SQLAlchemyError) as error:
             self.s.rollback()
-            self.s2.rollback()
             print("Error in add_teacher():", error)
             return "Add is not successful"
         return "Add is successful"
@@ -227,13 +221,8 @@ class DB:
         try:
             self.s.add(competition)
             self.s.commit()
-        except exc.OperationalError:
-            print("Go to slave server")
-            self.s2.add(competition)
-            self.s2.commit()
         except (Exception, exc.SQLAlchemyError) as error:
             self.s.rollback()
-            self.s2.rollback()
             print("Error in add_competition():", error)
             return "Add is not successful"
         return "Add is successful"
@@ -245,15 +234,8 @@ class DB:
                 {Participant.name: participant.name, Participant.height: participant.height,
                  Participant.weight: participant.weight})
             self.s.commit()
-        except exc.OperationalError:
-            print("Go to slave server")
-            u = self.s2.query(Participant).filter_by(id=participant.id).update(
-                {Participant.name: participant.name, Participant.height: participant.height,
-                 Participant.weight: participant.weight})
-            self.s2.commit()
         except (Exception, exc.SQLAlchemyError) as error:
             self.s.rollback()
-            self.s2.rollback()
             print("Error in update_participant():", error)
         if u:
             return "Update participant is successful"
@@ -266,14 +248,8 @@ class DB:
             u = self.s.query(Teacher).filter_by(id=teacher.id).update(
                 {Teacher.name: teacher.name})
             self.s.commit()
-        except exc.OperationalError:
-            print("Go to slave server")
-            u = self.s2.query(Teacher).filter_by(id=teacher.id).update(
-                {Teacher.name: teacher.name})
-            self.s2.commit()
         except (Exception, exc.SQLAlchemyError) as error:
             self.s.rollback()
-            self.s2.rollback()
             print("Error in update_teacher():", error)
         if u:
             return "Update teacher is successful"
@@ -288,16 +264,8 @@ class DB:
                  Competition.organizer_name: competition.organizer_name, Competition.budget: competition.budget,
                  Competition.country: competition.country, Competition.year: competition.year})
             self.s.commit()
-        except exc.OperationalError:
-            print("Go to slave server")
-            u = self.s2.query(Competition).filter_by(id=competition.id).update(
-                {Competition.name: competition.name, Competition.sport: competition.sport,
-                 Competition.organizer_name: competition.organizer_name, Competition.budget: competition.budget,
-                 Competition.country: competition.country, Competition.year: competition.year})
-            self.s2.commit()
         except (Exception, exc.SQLAlchemyError) as error:
             self.s.rollback()
-            self.s2.rollback()
             print("Error in update_competition():", error)
         if u:
             return "Update competition is successful"
@@ -311,13 +279,8 @@ class DB:
         try:
             self.s.delete(participant)
             self.s.commit()
-        except exc.OperationalError:
-            print("Go to slave server")
-            self.s2.delete(participant)
-            self.s2.commit()
         except (Exception, exc.SQLAlchemyError) as error:
             self.s.rollback()
-            self.s2.rollback()
             print("Error in remove:", error)
             return "Delete is not successful"
         return "Delete is successful"
@@ -329,13 +292,8 @@ class DB:
         try:
             self.s.delete(teacher)
             self.s.commit()
-        except exc.OperationalError:
-            print("Go to slave server")
-            self.s2.delete(teacher)
-            self.s2.commit()
         except (Exception, exc.SQLAlchemyError) as error:
             self.s.rollback()
-            self.s2.rollback()
             print("Error in remove:", error)
             return "Delete is not successful"
         return "Delete is successful"
@@ -347,13 +305,8 @@ class DB:
         try:
             self.s.delete(competition)
             self.s.commit()
-        except exc.OperationalError:
-            print("Go to slave server")
-            self.s2.delete(competition)
-            self.s2.commit()
         except (Exception, exc.SQLAlchemyError) as error:
             self.s.rollback()
-            self.s2.rollback()
             print("Error in remove:", error)
             return "Delete is not successful"
         return "Delete is successful"
@@ -422,22 +375,33 @@ class DB:
                 f"(getrandomteacherid()::int) as teacher_id "
                 f"FROM generate_series(1, {number}) g) as rnd;")
             self.s.commit()
-        except exc.OperationalError:
-            print("Go to slave server")
-            self.s2.execute(
-                f"insert into participants(name,date_of_birth,gender,height,weight,teacher_id) "
-                f"SELECT name,date_of_birth,gender,height,weight,teacher_id "
-                f"FROM (SELECT (md5(random()::text)) as name, "
-                f"(timestamp'1980-01-01'+ random()*(timestamp'2003-01-01'- timestamp'1980-01-01')) as date_of_birth, "
-                f"(array['M','F'])[trunc(random()*2)+1] as gender, "
-                f"trunc(random()*30+55) as height, "
-                f"trunc(random()*100+45) as weight, "
-                f"(getrandomteacherid()::int) as teacher_id "
-                f"FROM generate_series(1, {number}) g) as rnd;")
-            self.s2.commit()
         except (Exception, exc.SQLAlchemyError) as error:
             self.s.rollback()
-            self.s2.rollback()
+            print("Error in generate_participants():", error)
+            return "Failed to generate"
+        return "Generated"
+
+    def generate_participants_with_normal_data(self, number):
+        self.define_get_random_teacher_id_func()
+        faker = Faker()
+        try:
+            for x in range(number):
+                name = faker.name()
+                d1 = datetime.strptime('1/1/1960', '%m/%d/%Y')
+                d2 = datetime.strptime('1/1/2005', '%m/%d/%Y')
+                date_of_birth = self.random_date(d1, d2).__format__('%m-%d-%Y')
+                gender = 'F'
+                g = randrange(2)
+                if g == 1:
+                    gender = 'M'
+                height = randrange(45, 85)
+                weight = randrange(45, 150)
+                self.s.execute(
+                    f"Insert into participants (name,date_of_birth,gender,height,weight,teacher_id) "
+                    f"VALUES ('{name}','{date_of_birth}','{gender}', {height}, {weight}, (getrandomteacherid()::int))")
+                self.s.commit()
+        except (Exception, exc.SQLAlchemyError) as error:
+            self.s.rollback()
             print("Error in generate_participants():", error)
             return "Failed to generate"
         return "Generated"
@@ -460,27 +424,15 @@ class DB:
                             'end;' 
                             '$$; ')
             self.s.commit()
-        except exc.OperationalError:
-            self.s2.execute('create or replace function getrandomteacherid() returns text '
-                            'language plpgsql '
-                            'as '
-                            '$$ '
-                            'declare '
-                            'outputInt int; '
-                            'begin '
-                            'SELECT id '
-                            'FROM teachers '
-                            'ORDER BY random() '
-                            'LIMIT 1 '
-                            'into outputInt; '
-                            'return outputInt; '
-                            'end;'
-                            '$$; ')
-            self.s2.commit()
         except (Exception, exc.SQLAlchemyError) as error:
             self.s.rollback()
-            self.s2.rollback()
             print("Error in define_get_random_teacher_id_func():", error)
+
+    def random_date(self, start, end):
+        delta = end - start
+        int_delta = delta.days
+        random_day = randrange(int_delta)
+        return start + timedelta(days=random_day)
 
     def generate_teachers(self, number):
         try:
@@ -492,19 +444,29 @@ class DB:
                 f"(timestamp'2000-01-02'+ random()*(timestamp'2021-11-11'- timestamp'2000-01-02')) as started_practicing "
                 f"FROM generate_series(1, {number}) g) as rnd;")
             self.s.commit()
-        except exc.OperationalError:
-            print("Go to slave server")
-            self.s2.execute(
-                f"insert into teachers(name,date_of_birth,started_practicing) "
-                f"SELECT name,date_of_birth,started_practicing "
-                f"FROM (SELECT (md5(random()::text)||' '||(md5(random()::text))) as name, "
-                f"(timestamp'1980-01-01'+ random()*(timestamp'2000-01-01'- timestamp'1980-01-01')) as date_of_birth, "
-                f"(timestamp'2000-01-02'+ random()*(timestamp'2021-11-11'- timestamp'2000-01-02')) as started_practicing "
-                f"FROM generate_series(1, {number}) g) as rnd;")
-            self.s2.commit()
         except (Exception, exc.SQLAlchemyError) as error:
             self.s.rollback()
-            self.s2.rollback()
+            print("Error in generate_teachers():", error)
+            return "Failed to generate"
+        return "Generated"
+
+    def generate_teachers_with_normal_data(self, number):
+        faker = Faker()
+        try:
+            for x in range(number):
+                name = faker.name()
+                d1 = datetime.strptime('1/1/1960', '%m/%d/%Y')
+                d2 = datetime.strptime('1/1/1990', '%m/%d/%Y')
+                date_of_birth = self.random_date(d1, d2).__format__('%m-%d-%Y')
+                d3 = datetime.strptime('1/2/1990', '%m/%d/%Y')
+                d4 = datetime.strptime('1/1/2019', '%m/%d/%Y')
+                started_practicing = self.random_date(d3, d4).__format__('%m-%d-%Y')
+                self.s.execute(
+                    f"Insert into teachers (name,date_of_birth,started_practicing) "
+                    f"VALUES ('{name}','{date_of_birth}','{started_practicing}')")
+                self.s.commit()
+        except (Exception, exc.SQLAlchemyError) as error:
+            self.s.rollback()
             print("Error in generate_teachers():", error)
             return "Failed to generate"
         return "Generated"
@@ -522,22 +484,34 @@ class DB:
                 f"trunc(random()*70+1950) as year "
                 f"FROM generate_series(1, {number}) g) as rnd;")
             self.s.commit()
-        except exc.OperationalError:
-            print("Go to slave server")
-            self.s2.execute(
-                f"insert into competitions(name,sport,organizer_name,budget,country,year) "
-                f"SELECT name,sport,organizer_name,budget,country,year "
-                f"FROM (SELECT (md5(random()::text)) as name, "
-                f"(md5(random()::text)) as sport, "
-                f"(md5(random()::text)) as organizer_name, "
-                f"trunc(random()*70000+1000) as budget, "
-                f"(md5(random()::text)) as country, "
-                f"trunc(random()*70+1950) as year "
-                f"FROM generate_series(1, {number}) g) as rnd;")
-            self.s2.commit()
         except (Exception, exc.SQLAlchemyError) as error:
             self.s.rollback()
-            self.s2.rollback()
+            print("Error in generate_competitions():", error)
+            return "Failed to generate"
+        return "Generated"
+
+    def generate_competitions_with_normal_data(self, number):
+        try:
+            with open('data/summer.csv') as csv_file:
+                csv_reader = csv.reader(csv_file, delimiter=',', quotechar='"')
+                done = 0
+                for row in csv_reader:
+                    name = row[7]
+                    sport = row[2]
+                    organizer_name = row[1]
+                    budget = randrange(100, 150000)
+                    country = row[5]
+                    year = randrange(2000, 2021)
+                    self.s.execute(
+                        f"Insert into competitions (name,sport,organizer_name,budget,country,year) "
+                        f"VALUES ('{name}','{sport}','{organizer_name}',{budget},'{country}',{year})")
+                    self.s.commit()
+                    done += 1
+                    if done == number:
+                        return "Generated"
+
+        except (Exception, exc.SQLAlchemyError) as error:
+            self.s.rollback()
             print("Error in generate_competitions():", error)
             return "Failed to generate"
         return "Generated"
@@ -553,18 +527,8 @@ class DB:
                 f"(getrandomcompetitionid()::int) as competition_id "
                 f"FROM generate_series(1, {number}) g) as rnd;")
             self.s.commit()
-        except exc.OperationalError:
-            print("Go to slave server")
-            self.s2.execute(
-                f"insert into participants_competitions(participant_id, competition_id) "
-                f"SELECT participant_id, competition_id "
-                f"FROM (SELECT (getrandomparticipantid()::int) as participant_id, "
-                f"(getrandomcompetitionid()::int) as competition_id "
-                f"FROM generate_series(1, {number}) g) as rnd;")
-            self.s2.commit()
         except (Exception, exc.SQLAlchemyError) as error:
             self.s.rollback()
-            self.s2.rollback()
             print("Error in generate_participants_competitions():", error)
             return "Failed to generate"
         return "Generated"
@@ -587,26 +551,8 @@ class DB:
                             'end;' 
                             '$$; ')
             self.s.commit()
-        except exc.OperationalError:
-            self.s2.execute('create or replace function getrandomparticipantid() returns text '
-                            'language plpgsql '
-                            'as '
-                            '$$ '
-                            'declare '
-                            'outputInt int; '
-                            'begin '
-                            'SELECT id '
-                            'FROM participants '
-                            'ORDER BY random() '
-                            'LIMIT 1 '
-                            'into outputInt; '
-                            'return outputInt; '
-                            'end;' 
-                            '$$; ')
-            self.s2.commit()
         except (Exception, exc.SQLAlchemyError) as error:
             self.s.rollback()
-            self.s2.rollback()
             print("Error in define_get_random_participant_id_func():", error)
 
     def define_get_random_competition_id_func(self):
@@ -627,26 +573,8 @@ class DB:
                             'end;' 
                             '$$; ')
             self.s.commit()
-        except exc.OperationalError:
-            self.s2.execute('create or replace function getrandomcompetitionid() returns text '
-                            'language plpgsql '
-                            'as '
-                            '$$ '
-                            'declare '
-                            'outputInt int; '
-                            'begin '
-                            'SELECT id '
-                            'FROM competitions '
-                            'ORDER BY random() '
-                            'LIMIT 1 '
-                            'into outputInt; '
-                            'return outputInt; '
-                            'end;' 
-                            '$$; ')
-            self.s2.commit()
         except (Exception, exc.SQLAlchemyError) as error:
             self.s.rollback()
-            self.s2.rollback()
             print("Error in define_get_random_competition_id_func():", error)
 
     def count_competitions_of_each_year(self, participant_id):

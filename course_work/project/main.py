@@ -217,15 +217,18 @@ while choice != '27':
             view.print_entities(competitions)
     if choice == '21':
         number = view.get_number_generate()
-        mes = database.generate_participants(number)
+        # mes = database.generate_participants(number)
+        mes = database.generate_participants_with_normal_data(number)
         view.print_mes(mes)
     if choice == '22':
         number = view.get_number_generate()
-        mes = database.generate_teachers(number)
+        # mes = database.generate_teachers(number)
+        mes = database.generate_teachers_with_normal_data(number)
         view.print_mes(mes)
     if choice == '23':
         number = view.get_number_generate()
-        mes = database.generate_competitions(number)
+        # mes = database.generate_competitions(number)
+        mes = database.generate_competitions_with_normal_data(number)
         view.print_mes(mes)
     if choice == '24':
         number = view.get_number_generate()
