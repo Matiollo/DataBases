@@ -6,7 +6,7 @@ import pandas as pd
 from random import randrange
 from datetime import timedelta
 from datetime import datetime
-import csv
+import text_reading as tr
 
 
 class DB:
@@ -490,31 +490,54 @@ class DB:
             return "Failed to generate"
         return "Generated"
 
+    # def generate_competitions_with_normal_data(self, number):
+    #     try:
+    #         with open('data/summer.csv') as csv_file:
+    #             csv_reader = csv.reader(csv_file, delimiter=',', quotechar='"')
+    #             done = 0
+    #             for row in csv_reader:
+    #                 name = row[7]
+    #                 sport = row[2]
+    #                 organizer_name = row[1]
+    #                 budget = randrange(100, 150000)
+    #                 country = row[5]
+    #                 year = randrange(2000, 2021)
+    #                 self.s.execute(
+    #                     f"Insert into competitions (name,sport,organizer_name,budget,country,year) "
+    #                     f"VALUES ('{name}','{sport}','{organizer_name}',{budget},'{country}',{year})")
+    #                 self.s.commit()
+    #                 done += 1
+    #                 if done == number:
+    #                     return "Generated"
+    #
+    #     except (Exception, exc.SQLAlchemyError) as error:
+    #         self.s.rollback()
+    #         print("Error in generate_competitions():", error)
+    #         return "Failed to generate"
+    #     return "Generated"
+
     def generate_competitions_with_normal_data(self, number):
         try:
-            with open('data/summer.csv') as csv_file:
-                csv_reader = csv.reader(csv_file, delimiter=',', quotechar='"')
-                done = 0
-                for row in csv_reader:
-                    name = row[7]
-                    sport = row[2]
-                    organizer_name = row[1]
-                    budget = randrange(100, 150000)
-                    country = row[5]
-                    year = randrange(2000, 2021)
-                    self.s.execute(
-                        f"Insert into competitions (name,sport,organizer_name,budget,country,year) "
-                        f"VALUES ('{name}','{sport}','{organizer_name}',{budget},'{country}',{year})")
-                    self.s.commit()
-                    done += 1
-                    if done == number:
-                        return "Generated"
-
+            for x in range(number):
+                parameters = tr.get_competition_parameters_from_csv()
+                if type(parameters) is str:
+                    return "Failed to generate"
+                name = parameters["name"]
+                sport = parameters["sport"]
+                organizer_name = parameters["organizer_name"]
+                budget = randrange(100, 150000)
+                country = parameters["country"]
+                year = randrange(2000, 2021)
+                self.s.execute(
+                    f"Insert into competitions (name,sport,organizer_name,budget,country,year) "
+                    f"VALUES ('{name}','{sport}','{organizer_name}',{budget},'{country}',{year})")
+                self.s.commit()
         except (Exception, exc.SQLAlchemyError) as error:
             self.s.rollback()
             print("Error in generate_competitions():", error)
             return "Failed to generate"
         return "Generated"
+
 
     def generate_participants_competitions(self, number):
         self.define_get_random_participant_id_func()
